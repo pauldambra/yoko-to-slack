@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="poll-for-toots">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/poll-for-toots/.serverless/poll-for-toots.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

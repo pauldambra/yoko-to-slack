@@ -1,0 +1,24 @@
+service: poll-for-toots
+
+frameworkVersion: '2'
+
+plugins:
+  - serverless-plugin-typescript
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: eu-west-1
+  lambdaHashingVersion: 20201221
+  tracing:
+    lambda: true
+  architecture: arm64
+  environment:
+    TWITTER_BEARER_TOKEN: ${env:BEARER}
+
+
+functions:
+  rateHandler:
+    handler: handler.run
+    events:
+      - schedule: rate(5 minutes)
