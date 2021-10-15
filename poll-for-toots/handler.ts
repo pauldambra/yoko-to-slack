@@ -6,11 +6,14 @@ import https from 'https'
 import axios, { AxiosInstance } from 'axios'
 
 import DynamoDB, { GetItemInput, PutItemInput } from 'aws-sdk/clients/dynamodb'
+import Sqs, { SendMessageRequest } from "aws-sdk/clients/sqs";
 
 AWSXRay.captureHTTPsGlobal(http)
 AWSXRay.captureHTTPsGlobal(https)
 
 const ddb = new DynamoDB()
+const sqs = new Sqs()
+
 
 let twitterAPI: AxiosInstance
 
@@ -41,7 +44,12 @@ export const run = async () =>
   // event: EventBridgeEvent<'Scheduled Event', any>,
   // context: Context
   {
-    let tableName = process.env.DYNAMO_TABLE_NAME
+    const queueUrl = process.env.TOOTED_PHOTOS_QUEUE;
+    if (!queueUrl) {
+      throw new Error('must receive a queue url')
+    }
+
+    const tableName = process.env.DYNAMO_TABLE_NAME;
     if (!tableName) {
       throw new Error('must receive a dynamodb table name')
     }
@@ -100,6 +108,17 @@ export const run = async () =>
       }
 
       await ddb.putItem(params).promise()
+
+      const sends = withPhotos.map(wp => {
+        const enqueueParams: SendMessageRequest = {
+          QueueUrl: queueUrl,
+          MessageBody: JSON.stringify(wp)
+        }
+        return sqs.sendMessage(enqueueParams).promise()
+      })
+
+      return Promise.all(sends)
+
     } catch (e) {
       console.error(e)
       throw e

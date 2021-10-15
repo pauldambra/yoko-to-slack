@@ -18,7 +18,13 @@ provider:
   environment:
     TWITTER_BEARER_TOKEN: ${env:BEARER}
     DYNAMO_TABLE_NAME: ${self:custom.tableName}
+    TOOTED_PHOTOS_QUEUE: { Ref: TootedPhotosSQSQueue }
   iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sqs:*
+      Resource:
+        Fn::GetAtt: [ TootedPhotosSQSQueue, Arn ]
     - Effect: Allow
       Action:
         - dynamodb:PutItem
@@ -33,6 +39,7 @@ custom:
   stage: ${opt:stage, self:provider.stage}
   # Set the table name here so, we can use it while testing locally
   tableName: ${self:custom.stage}-yoko-to-slack
+  tootedPhotosQueueName: ${self:custom.stage}-tooted-photos-queue
 
 functions:
   rateHandler:
@@ -42,6 +49,10 @@ functions:
 
 resources:
   Resources:
+    TootedPhotosSQSQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: ${self:custom.tootedPhotosQueueName}
     YokoToSlackTable:
       Type: AWS::DynamoDB::Table
       Properties:
