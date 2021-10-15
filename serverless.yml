@@ -4,6 +4,7 @@ frameworkVersion: '2'
 
 plugins:
   - serverless-plugin-typescript
+  - serverless-lift
 
 provider:
   stage: dev
@@ -12,19 +13,15 @@ provider:
   region: eu-west-1
   lambdaHashingVersion: 20201221
   logRetentionInDays: 5
+  package:
+    individually: true
   tracing:
     lambda: true
   architecture: arm64
   environment:
     TWITTER_BEARER_TOKEN: ${env:BEARER}
     DYNAMO_TABLE_NAME: ${self:custom.tableName}
-    TOOTED_PHOTOS_QUEUE: { Ref: TootedPhotosSQSQueue }
   iamRoleStatements:
-    - Effect: Allow
-      Action:
-        - sqs:*
-      Resource:
-        Fn::GetAtt: [ TootedPhotosSQSQueue, Arn ]
     - Effect: Allow
       Action:
         - dynamodb:PutItem
@@ -39,20 +36,24 @@ custom:
   stage: ${opt:stage, self:provider.stage}
   # Set the table name here so, we can use it while testing locally
   tableName: ${self:custom.stage}-yoko-to-slack
-  tootedPhotosQueueName: ${self:custom.stage}-tooted-photos-queue
+
+
+constructs:
+  mediatoots:
+    type: queue
+    worker:
+      handler: slurp-to-labelling/handler.run
 
 functions:
   rateHandler:
     handler: poll-for-toots/handler.run
+    environment:
+      TOOTED_PHOTOS_QUEUE: ${construct:mediatoots.queueUrl}
     events:
       - schedule: rate(5 minutes)
 
 resources:
   Resources:
-    TootedPhotosSQSQueue:
-      Type: "AWS::SQS::Queue"
-      Properties:
-        QueueName: ${self:custom.tootedPhotosQueueName}
     YokoToSlackTable:
       Type: AWS::DynamoDB::Table
       Properties:
