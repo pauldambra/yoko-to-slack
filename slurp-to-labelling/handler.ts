@@ -1,33 +1,57 @@
 import { SQSEvent } from 'aws-lambda'
 
-import Rekognition, { DetectLabelsRequest } from 'aws-sdk/clients/rekognition'
+import Rekognition, { Labels } from 'aws-sdk/clients/rekognition'
 import axios from 'axios'
+import { AWSError } from 'aws-sdk'
+import { PromiseResult } from 'aws-sdk/lib/request'
+import { Toot } from '../types'
 
 const rekognition = new Rekognition()
 
-const getFileContentById = async (
+const downloadPhoto = async (
   download_url: string
 ): Promise<Buffer> => {
   const response = await axios.get(download_url, {
-    responseType: 'arraybuffer'
+    responseType: 'arraybuffer',
   })
-  return Buffer.from((response.data as string), 'base64')
+  return Buffer.from(response.data as string, 'base64')
+}
+
+interface TootMediaProcessing {
+  Labels?: Labels
+  toot: Toot
 }
 
 export const run = async (event: SQSEvent) => {
-  const labels = await Promise.all(event.Records.map(r => JSON.parse(r.body)).map(toot => {
-    const mediaUrl = toot.entities.media[0].media_url
-    return getFileContentById(mediaUrl).then(buffer => {
-      console.log({ mediaUrl, buffer, e: toot.entities, m: toot.entities.media })
-      const dlp: DetectLabelsRequest = {
-        Image: {
-          Bytes: buffer
-        }
-      }
-      return rekognition.detectLabels(dlp).promise()
+  const processedTootMedia: TootMediaProcessing[] = await Promise.all(
+    event.Records.map((r) => JSON.parse(r.body)).map((toot) => {
+      const mediaUrl = toot.entities.media[0].media_url
+      return downloadPhoto(mediaUrl)
+        .then((buffer) =>
+          rekognition
+            .detectLabels({
+              Image: {
+                Bytes: buffer,
+              },
+            })
+            .promise()
+        )
+        .then(
+          (
+            rr: PromiseResult<
+              Rekognition.DetectLabelsResponse,
+              AWSError
+            >
+          ) =>
+            ({
+              Labels: rr.Labels,
+              toot: toot,
+            } as TootMediaProcessing)
+        )
     })
-
-  }))
-  console.log(labels)
+  )
+  processedTootMedia.forEach((x) => {
+    console.log(x)
+  })
   throw new Error('no processing yet')
 }

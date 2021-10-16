@@ -5,8 +5,12 @@ import https from 'https'
 
 import axios, { AxiosInstance } from 'axios'
 
-import DynamoDB, { GetItemInput, PutItemInput } from 'aws-sdk/clients/dynamodb'
-import Sqs, { SendMessageRequest } from "aws-sdk/clients/sqs";
+import DynamoDB, {
+  GetItemInput,
+  PutItemInput,
+} from 'aws-sdk/clients/dynamodb'
+import Sqs, { SendMessageRequest } from 'aws-sdk/clients/sqs'
+import { Toot } from '../types'
 
 AWSXRay.captureHTTPsGlobal(http)
 AWSXRay.captureHTTPsGlobal(https)
@@ -14,22 +18,7 @@ AWSXRay.captureHTTPsGlobal(https)
 const ddb = new DynamoDB()
 const sqs = new Sqs()
 
-
 let twitterAPI: AxiosInstance
-
-interface TootMedia {
-  id: number
-  media_url_https: string
-  type: string // we care about type = "photo"
-}
-
-interface TootEntities {
-  media: TootMedia[]
-}
-
-interface Toot {
-  entities: TootEntities
-}
 
 interface TootMetadata {
   max_id_str: string
@@ -44,12 +33,12 @@ export const run = async () =>
   // event: EventBridgeEvent<'Scheduled Event', any>,
   // context: Context
   {
-    const queueUrl = process.env.TOOTED_PHOTOS_QUEUE;
+    const queueUrl = process.env.TOOTED_PHOTOS_QUEUE
     if (!queueUrl) {
       throw new Error('must receive a queue url')
     }
 
-    const tableName = process.env.DYNAMO_TABLE_NAME;
+    const tableName = process.env.DYNAMO_TABLE_NAME
     if (!tableName) {
       throw new Error('must receive a dynamodb table name')
     }
@@ -109,16 +98,15 @@ export const run = async () =>
 
       await ddb.putItem(params).promise()
 
-      const sends = withPhotos.map(wp => {
+      const sends = withPhotos.map((wp) => {
         const enqueueParams: SendMessageRequest = {
           QueueUrl: queueUrl,
-          MessageBody: JSON.stringify(wp)
+          MessageBody: JSON.stringify(wp),
         }
         return sqs.sendMessage(enqueueParams).promise()
       })
 
       return Promise.all(sends)
-
     } catch (e) {
       console.error(e)
       throw e

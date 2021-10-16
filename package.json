@@ -6,8 +6,8 @@
   "license": "CC-BY-SA-4.0",
   "scripts": {
     "precommit": "npm run format && npm run lint",
-    "format": "poll-for-toots/node_modules/.bin/prettier --write .",
-    "lint": "poll-for-toots/node_modules/.bin/eslint . --ext .ts --fix"
+    "format": "prettier --write .",
+    "lint": "eslint . --ext .ts --fix"
   },
   "dependencies": {
     "aws-sdk": "^2.1008.0",

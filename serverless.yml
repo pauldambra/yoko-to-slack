@@ -40,12 +40,17 @@ custom:
   # Set the table name here so, we can use it while testing locally
   tableName: ${self:custom.stage}-yoko-to-slack
 
-
 constructs:
   mediatoots:
     type: queue
     worker:
       handler: slurp-to-labelling/handler.run
+      iamRoleStatements:
+        - Effect: Allow
+          Action:
+            - rekognition:DetectLabels
+          Resource:
+            - '*'
 
 functions:
   rateHandler:
@@ -68,4 +73,3 @@ resources:
           - AttributeName: type
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
-
