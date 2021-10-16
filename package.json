@@ -10,7 +10,7 @@
     "lint": "eslint . --ext .ts --fix"
   },
   "dependencies": {
-    "aws-sdk": "^2.1008.0",
+    "aws-sdk": "^2.1009.0",
     "aws-xray-sdk-core": "^3.3.3",
     "axios": "^0.23.0"
   },
