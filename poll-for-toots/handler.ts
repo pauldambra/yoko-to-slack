@@ -1,23 +1,10 @@
-import * as AWSXRay from 'aws-xray-sdk-core'
-import http from 'http'
-import https from 'https'
 // import { Context, EventBridgeEvent } from 'aws-lambda'
-AWSXRay.captureHTTPsGlobal(http)
-AWSXRay.captureHTTPsGlobal(https)
-import axios, { AxiosInstance } from 'axios'
 
-import DynamoDB, {
-  GetItemInput,
-  PutItemInput,
-} from 'aws-sdk/clients/dynamodb'
-import Sqs, { SendMessageRequest } from 'aws-sdk/clients/sqs'
+import { GetItemInput, PutItemInput } from 'aws-sdk/clients/dynamodb'
+import { SendMessageRequest } from 'aws-sdk/clients/sqs'
 import { Toot } from '../types'
-
-const ddbUntraced = new DynamoDB()
-const sqsUntraced = new Sqs()
-
-const ddb = AWSXRay.captureAWSClient(ddbUntraced)
-const sqs = AWSXRay.captureAWSClient(sqsUntraced)
+import { AxiosInstance } from 'axios'
+import { axios, dynamoDB, sqs } from '../tracedClients'
 
 let twitterAPI: AxiosInstance
 
@@ -66,7 +53,7 @@ export const run = async () =>
         Key: { type: { S: 'twitter-page-id' } },
       }
 
-      const getResult = await ddb.getItem(getParams).promise()
+      const getResult = await dynamoDB.getItem(getParams).promise()
 
       let searchURL =
         'https://api.twitter.com/1.1/search/tweets.json?q=from%3Apauldambra&result_type=recent'
@@ -97,7 +84,7 @@ export const run = async () =>
         },
       }
 
-      await ddb.putItem(params).promise()
+      await dynamoDB.putItem(params).promise()
 
       const sends = withPhotos.map((wp) => {
         const enqueueParams: SendMessageRequest = {
