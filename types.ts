@@ -1,3 +1,5 @@
+import { Labels } from 'aws-sdk/clients/rekognition'
+
 export interface TootMedia {
   id: number
   media_url_https: string
@@ -10,4 +12,10 @@ export interface TootEntities {
 
 export interface Toot {
   entities: TootEntities
+  text: string
+}
+
+export interface TootMediaProcessing {
+  Labels?: Labels
+  toot: Toot
 }

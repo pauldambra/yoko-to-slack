@@ -43,6 +43,10 @@ custom:
 constructs:
   dogtoots:
     type: queue
+    worker:
+      handler: sling-to-slack/handler.run
+      environment:
+        SLACK_WEBHOOK_URL: ${env:SLACK_WEBHOOK_URL}
   mediatoots:
     type: queue
     worker:
@@ -57,13 +61,13 @@ constructs:
             - '*'
 
 functions:
-  rateHandler:
+  pollToots:
     handler: poll-for-toots/handler.run
     environment:
       TOOTED_PHOTOS_QUEUE: ${construct:mediatoots.queueUrl}
     events:
       - schedule: rate(5 minutes)
-  dogProcessor:
+  slingToSlack:
     handler: sling-to-slack/handler.run
 
 resources:
