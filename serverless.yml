@@ -41,10 +41,14 @@ custom:
   tableName: ${self:custom.stage}-yoko-to-slack
 
 constructs:
+  dogtoots:
+    type: queue
   mediatoots:
     type: queue
     worker:
       handler: slurp-to-labelling/handler.run
+      environment:
+        FOUND_DOG_QUEUE: ${construct:dogtoots.queueUrl}
       iamRoleStatements:
         - Effect: Allow
           Action:
@@ -59,6 +63,8 @@ functions:
       TOOTED_PHOTOS_QUEUE: ${construct:mediatoots.queueUrl}
     events:
       - schedule: rate(5 minutes)
+  dogProcessor:
+    handler: sling-to-slack/handler.run
 
 resources:
   Resources:

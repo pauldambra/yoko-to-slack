@@ -5,7 +5,8 @@ import Rekognition, { Labels } from 'aws-sdk/clients/rekognition'
 import { AWSError } from 'aws-sdk'
 import { PromiseResult } from 'aws-sdk/lib/request'
 import { Toot } from '../types'
-import { axios, rekognition } from '../tracedClients'
+import { axios, rekognition, sqs } from '../tracedClients'
+import { SendMessageRequest } from 'aws-sdk/clients/sqs'
 
 const downloadPhoto = async (
   download_url: string
@@ -22,6 +23,11 @@ interface TootMediaProcessing {
 }
 
 export const run = async (event: SQSEvent) => {
+  const queueUrl = process.env.FOUND_DOG_QUEUE
+  if (!queueUrl) {
+    throw new Error('must receive found dog queue url')
+  }
+
   const processedTootMedia: TootMediaProcessing[] = await Promise.all(
     event.Records.map((r) => JSON.parse(r.body)).map((toot) => {
       const mediaUrl = toot.entities.media[0].media_url
@@ -58,6 +64,15 @@ export const run = async (event: SQSEvent) => {
       })
     }
   )
-  console.log({ tootsWithDogs })
-  throw new Error('no processing yet')
+
+  const sends = tootsWithDogs.map((twd) => {
+    const enqueueParams: SendMessageRequest = {
+      QueueUrl: queueUrl,
+      MessageBody: JSON.stringify(twd),
+    }
+    console.log({ enqueuing: enqueueParams })
+    return sqs.sendMessage(enqueueParams).promise()
+  })
+
+  await Promise.all(sends)
 }
