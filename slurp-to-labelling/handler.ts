@@ -52,9 +52,10 @@ export const run = async (event: SQSEvent) => {
   const tootsWithDogs = processedTootMedia.filter(
     (potentialDogToot) => {
       console.log({ potentialDogToot })
-      return potentialDogToot.Labels?.some((l) =>
-        l?.Name?.toLowerCase().includes(' dog ')
-      )
+      return potentialDogToot.Labels?.some((l) => {
+        console.log(l, 'checking label for dog')
+        return l?.Name?.toLowerCase().includes(' dog ')
+      })
     }
   )
   console.log({ tootsWithDogs })
