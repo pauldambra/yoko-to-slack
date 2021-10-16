@@ -94,7 +94,7 @@ export const run = async () =>
         return sqs.sendMessage(enqueueParams).promise()
       })
 
-      return Promise.all(sends)
+      await Promise.all(sends)
     } catch (e) {
       console.error(e)
       throw e
