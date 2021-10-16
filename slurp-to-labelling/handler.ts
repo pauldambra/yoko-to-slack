@@ -50,8 +50,14 @@ export const run = async (event: SQSEvent) => {
         )
     })
   )
-  processedTootMedia.forEach((x) => {
-    console.log(x)
-  })
+  const tootsWithDogs = processedTootMedia.filter(
+    (potentialDogToot) => {
+      console.log({ potentialDogToot })
+      return potentialDogToot.Labels?.some((l) =>
+        l?.Name?.toLowerCase().includes(' dog ')
+      )
+    }
+  )
+  console.log({ tootsWithDogs })
   throw new Error('no processing yet')
 }
