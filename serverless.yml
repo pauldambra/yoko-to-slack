@@ -13,8 +13,6 @@ provider:
   region: eu-west-1
   lambdaHashingVersion: 20201221
   logRetentionInDays: 5
-  package:
-    individually: true
   tracing:
     lambda: true
   architecture: arm64
@@ -30,6 +28,11 @@ provider:
       # the specific table for the stage
       Resource:
         - 'Fn::GetAtt': [YokoToSlackTable, Arn]
+    - Effect: Allow
+      Action:
+        - rekognition:DetectLabels
+      Resource:
+        - '*'
 custom:
   # Our stage is based on what is passed in when running serverless
   # commands. Or falls back to what we have set in the provider section.
