@@ -54,7 +54,7 @@ export const run = async (event: SQSEvent) => {
       console.log({ potentialDogToot })
       return potentialDogToot.Labels?.some((l) => {
         console.log(l, 'checking label for dog')
-        return l?.Name?.toLowerCase().includes(' dog ')
+        return l?.Name?.toLowerCase() === 'dog'
       })
     }
   )
