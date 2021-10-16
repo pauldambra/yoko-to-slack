@@ -2,7 +2,8 @@ import * as AWSXRay from 'aws-xray-sdk-core'
 import http from 'http'
 import https from 'https'
 // import { Context, EventBridgeEvent } from 'aws-lambda'
-
+AWSXRay.captureHTTPsGlobal(http)
+AWSXRay.captureHTTPsGlobal(https)
 import axios, { AxiosInstance } from 'axios'
 
 import DynamoDB, {
@@ -12,11 +13,11 @@ import DynamoDB, {
 import Sqs, { SendMessageRequest } from 'aws-sdk/clients/sqs'
 import { Toot } from '../types'
 
-AWSXRay.captureHTTPsGlobal(http)
-AWSXRay.captureHTTPsGlobal(https)
+const ddbUntraced = new DynamoDB()
+const sqsUntraced = new Sqs()
 
-const ddb = new DynamoDB()
-const sqs = new Sqs()
+const ddb = AWSXRay.captureAWSClient(ddbUntraced)
+const sqs = AWSXRay.captureAWSClient(sqsUntraced)
 
 let twitterAPI: AxiosInstance
 

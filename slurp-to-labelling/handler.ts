@@ -1,12 +1,19 @@
 import { SQSEvent } from 'aws-lambda'
+import * as AWSXRay from 'aws-xray-sdk-core'
 
 import Rekognition, { Labels } from 'aws-sdk/clients/rekognition'
+
+import http from 'http'
+import https from 'https'
+AWSXRay.captureHTTPsGlobal(http)
+AWSXRay.captureHTTPsGlobal(https)
 import axios from 'axios'
 import { AWSError } from 'aws-sdk'
 import { PromiseResult } from 'aws-sdk/lib/request'
 import { Toot } from '../types'
 
-const rekognition = new Rekognition()
+const rekognitionUntraced = new Rekognition()
+const rekognition = AWSXRay.captureAWSClient(rekognitionUntraced)
 
 const downloadPhoto = async (
   download_url: string
