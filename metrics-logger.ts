@@ -18,7 +18,7 @@ export const cloudwatchCounter = async (
     'logging a single counter'
   )
 
-  await cloudwatch
+  const response = await cloudwatch
     .putMetricData({
       Namespace: 'slack-to-yoko',
       MetricData: [
@@ -32,4 +32,5 @@ export const cloudwatchCounter = async (
       ],
     } as PutMetricDataInput)
     .promise()
+  console.log(response)
 }
