@@ -16,5 +16,3 @@ reads from the tooted photos queue. sends the photos to rekognition and filters 
 ### sling to slack ƛ
 
 reads from the dog toots queue. and does what to them?
-
-- [ ] should handle toot with multiple images

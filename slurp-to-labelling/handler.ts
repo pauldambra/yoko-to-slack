@@ -6,6 +6,7 @@ import { AWSError } from 'aws-sdk'
 import { PromiseResult } from 'aws-sdk/lib/request'
 import { Toot, TootMediaProcessing } from '../types'
 import { axios, rekognition, sqs } from '../tracedClients'
+import { cloudwatchCounter } from '../metrics-logger'
 
 const downloadPhoto = async (
   download_url: string
@@ -60,20 +61,42 @@ export const run = async (event: SQSEvent) => {
   )
 
   const tootsWithDogs = processedTootMedia.filter(
-    (potentialDogToot) =>
-      potentialDogToot.Labels?.some(
+    (potentialDogToot) => {
+      console.log(potentialDogToot.Labels)
+      return potentialDogToot.Labels?.some(
         (l) => l?.Name?.toLowerCase() === 'dog'
       )
+    }
+  )
+
+  await cloudwatchCounter(
+    tootsWithDogs.length,
+    'images-with-dogs-in',
+    {
+      Name: 'Toot Images',
+      Value: 'labelled with dog',
+    }
   )
 
   // each toot has all its media. for any that we has more than one dog photo
   // we can keep only one toot to process
-  const groupedToots = tootsWithDogs.reduce((acc, curr) => {
-    acc[curr.toot.id_str] = curr
-    return acc
-  }, {} as Record<string, TootMediaProcessing>)
+  const groupedToots = Object.values(
+    tootsWithDogs.reduce((acc, curr) => {
+      acc[curr.toot.id_str] = curr
+      return acc
+    }, {} as Record<string, TootMediaProcessing>)
+  )
 
-  const sends = Object.values(groupedToots).map((twd) =>
+  await cloudwatchCounter(
+    groupedToots.length,
+    'toots-with-dog-photos',
+    {
+      Name: 'Grouped Toots',
+      Value: 'labelled and have dog photos',
+    }
+  )
+
+  const sends = groupedToots.map((twd) =>
     sqs
       .sendMessage({
         QueueUrl: queueUrl,
