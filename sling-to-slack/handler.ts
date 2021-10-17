@@ -24,20 +24,14 @@ export const run = async (event: SQSEvent) => {
     throw new Error('must receive a slack url from the environment')
   }
 
-  try {
-    await Promise.all(
-      event.Records.map((r) => {
-        const { toot } = JSON.parse(r.body) as TootMediaProcessing
-        return axios.post(
-          slackUrl,
-          { text: toot.text, blocks: tootToBlock(toot) },
-          {
-            headers: { contentType: 'application/json' },
-          }
-        )
+  await Promise.all(
+    event.Records.map((r) => {
+      const { toot } = JSON.parse(r.body) as TootMediaProcessing
+      const blocks = tootToBlock(toot)
+      const data = { text: toot.text, blocks: blocks }
+      return axios.post(slackUrl, data, {
+        headers: { contentType: 'application/json' },
       })
-    )
-  } catch (e) {
-    console.error(e)
-  }
+    })
+  )
 }
