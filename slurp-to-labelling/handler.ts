@@ -66,8 +66,14 @@ export const run = async (event: SQSEvent) => {
       )
   )
 
-  // todo - for a toot with M dog pictures this processes the toot M times
-  const sends = tootsWithDogs.map((twd) =>
+  // each toot has all its media. for any that we has more than one dog photo
+  // we can keep only one toot to process
+  const groupedToots = tootsWithDogs.reduce((acc, curr) => {
+    acc[curr.toot.id_str] = curr
+    return acc
+  }, {} as Record<string, TootMediaProcessing>)
+
+  const sends = Object.values(groupedToots).map((twd) =>
     sqs
       .sendMessage({
         QueueUrl: queueUrl,

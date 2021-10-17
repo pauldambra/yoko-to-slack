@@ -13,6 +13,7 @@ export interface TootEntities {
 export interface Toot {
   entities: TootEntities
   text: string
+  id_str: string
 }
 
 export interface TootMediaProcessing {
