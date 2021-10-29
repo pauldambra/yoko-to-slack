@@ -48,7 +48,9 @@ export const run = async (event: APIGatewayProxyEventV2) => {
         Item: {
           webhook: { S: JSON.stringify(raw) },
           type: { S: 'webhook' },
-          lookup: { S: grantId },
+          lookup: {
+            S: `${raw.team_id}.${raw.incoming_webhook.channel_id}`,
+          },
         },
       }
       await dynamoDB.putItem(params).promise()

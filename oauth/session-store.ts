@@ -1,10 +1,4 @@
 import { dynamoDB } from '../tracedClients'
-import { AttributeMap } from 'aws-sdk/clients/dynamodb'
-
-interface AsWritten {
-  id: string
-  session: AttributeMap
-}
 
 const tableName = process.env.DYNAMO_SESSION_STORE
 if (!tableName) {
@@ -16,12 +10,9 @@ export const get = async (sid: string) => {
     TableName: tableName,
     Key: { sid: { S: sid } },
   }
-  console.log({ getParams: params })
   const getResult = await dynamoDB.getItem(params).promise()
-  const session = (getResult.Item as unknown as AsWritten).session
-  const sessionValue = session.S as string
-  console.log({ getResult, sessionValue, session })
-  return JSON.parse(sessionValue)
+  const sessionValue = getResult?.Item?.session?.S as string
+  return JSON.parse(sessionValue || '{}')
 }
 
 export const set = async (
@@ -36,9 +27,7 @@ export const set = async (
       session: { S: session },
     },
   }
-  console.log({ putParams: params, sid, json, session })
-  const putResult = await dynamoDB.putItem(params).promise()
-  console.log({ putResult })
+  return await dynamoDB.putItem(params).promise()
 }
 
 export const remove = async (sid: string) => {
@@ -46,6 +35,5 @@ export const remove = async (sid: string) => {
     TableName: tableName,
     Key: { sid: { S: sid } },
   }
-  console.log({ deleteParams: params })
-  return dynamoDB.deleteItem(params).promise()
+  return await dynamoDB.deleteItem(params).promise()
 }

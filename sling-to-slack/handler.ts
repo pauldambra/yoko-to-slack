@@ -1,6 +1,7 @@
 import { SQSEvent } from 'aws-lambda'
-import { axios } from '../tracedClients'
+import { axios, dynamoDB } from '../tracedClients'
 import { Toot, TootMediaProcessing } from '../types'
+import { QueryInput } from 'aws-sdk/clients/dynamodb'
 
 const tootToBlock = (toot: Toot) => [
   {
@@ -17,20 +18,44 @@ const tootToBlock = (toot: Toot) => [
   })),
 ]
 
+const tableName = process.env.DYNAMO_TABLE_NAME
+if (!tableName) {
+  throw new Error('must receive dynamo table name')
+}
+
 export const run = async (event: SQSEvent) => {
   console.log({ event: JSON.stringify(event) })
-  const slackUrl = process.env.SLACK_WEBHOOK_URL
-  if (!slackUrl) {
-    throw new Error('must receive a slack url from the environment')
+
+  const queryParams: QueryInput = {
+    TableName: tableName,
+    ExpressionAttributeNames: { '#type': 'type' },
+    KeyConditionExpression: '#type = :t',
+    ExpressionAttributeValues: {
+      ':t': { S: 'webhook' },
+    },
   }
+  const getResult = await dynamoDB.query(queryParams).promise()
+  const subscribers = (getResult?.Items || []).map((i) => {
+    const x = JSON.parse(<string>i?.webhook?.S)
+    return {
+      accessToken: x.access_token,
+      slackUrl: x.incoming_webhook.url,
+    }
+  })
+  console.log({ getResult, subscribers })
 
   await Promise.all(
-    event.Records.map((r) => {
-      const { toot } = JSON.parse(r.body) as TootMediaProcessing
-      const blocks = tootToBlock(toot)
-      const data = { text: toot.text, blocks: blocks }
-      return axios.post(slackUrl, data, {
-        headers: { contentType: 'application/json' },
+    event.Records.flatMap((r) => {
+      return subscribers.map((s) => {
+        const { toot } = JSON.parse(r.body) as TootMediaProcessing
+        const blocks = tootToBlock(toot)
+        const data = { text: toot.text, blocks: blocks }
+        return axios.post(s.slackUrl, data, {
+          headers: {
+            contentType: 'application/json',
+            Authorization: `Bearer ${s.accessToken}`,
+          },
+        })
       })
     })
   )

@@ -40,71 +40,70 @@ export const run = async () => {
   const { queueUrl, tableName, twitterBearerToken } =
     requiredEnvironmentVariables()
 
-  try {
-    if (!twitterAPI) {
-      twitterAPI = axios.create({
-        headers: {
-          Authorization: `Bearer ${twitterBearerToken}`,
-        },
-      })
-    }
-
-    const getResult = await dynamoDB
-      .getItem({
-        TableName: tableName,
-        Key: {
-          type: { S: 'twitter-page-id' },
-          lookup: { S: 'twitter-page-id' },
-        },
-      })
-      .promise()
-
-    let searchURL =
-      'https://api.twitter.com/1.1/search/tweets.json?q=from%3Apauldambra&result_type=recent'
-
-    if (getResult?.Item) {
-      const last_seen_toot_id = getResult.Item?.id?.S
-
-      if (last_seen_toot_id) {
-        searchURL += `&since_id=${last_seen_toot_id}`
-      }
-    }
-
-    const response = await twitterAPI.get(searchURL)
-    const { statuses, search_metadata } =
-      response.data as TwitterSearchResponse
-
-    const withPhotos = statuses.filter((s) =>
-      s.entities?.media?.some((m) => m.type === 'photo')
-    )
-
-    await cloudwatchCounter(withPhotos.length, 'toots-with-photos', {
-      Name: 'Toots',
-      Value: 'polled and have photos',
+  if (!twitterAPI) {
+    twitterAPI = axios.create({
+      headers: {
+        Authorization: `Bearer ${twitterBearerToken}`,
+      },
     })
-
-    await dynamoDB
-      .putItem({
-        TableName: tableName,
-        Item: {
-          id: { S: search_metadata.max_id_str },
-          type: { S: 'twitter-page-id' },
-          lookup: { S: 'twitter-page-id' },
-        },
-      })
-      .promise()
-
-    const sends = withPhotos.map((wp) => {
-      const enqueueParams: SendMessageRequest = {
-        QueueUrl: queueUrl,
-        MessageBody: JSON.stringify(wp),
-      }
-      return sqs.sendMessage(enqueueParams).promise()
-    })
-
-    await Promise.all(sends)
-  } catch (e) {
-    console.error(e)
-    throw e
   }
+
+  const getResult = await dynamoDB
+    .getItem({
+      TableName: tableName,
+      Key: {
+        type: { S: 'twitter-page-id' },
+        lookup: { S: 'twitter-page-id' },
+      },
+    })
+    .promise()
+
+  let searchURL =
+    'https://api.twitter.com/1.1/search/tweets.json?q=from%3Apauldambra&result_type=recent'
+
+  if (getResult?.Item) {
+    const last_seen_toot_id = getResult.Item?.id?.S
+
+    if (last_seen_toot_id) {
+      searchURL += `&since_id=${last_seen_toot_id}`
+    }
+  }
+
+  const response = await twitterAPI.get(searchURL)
+  if (response.status !== 200) {
+    console.error(JSON.stringify(response))
+    throw new Error('cannot get from Twitter')
+  }
+  const { statuses, search_metadata } =
+    response.data as TwitterSearchResponse
+
+  const withPhotos = statuses.filter((s) =>
+    s.entities?.media?.some((m) => m.type === 'photo')
+  )
+
+  await cloudwatchCounter(withPhotos.length, 'toots-with-photos', {
+    Name: 'Toots',
+    Value: 'polled and have photos',
+  })
+
+  await dynamoDB
+    .putItem({
+      TableName: tableName,
+      Item: {
+        id: { S: search_metadata.max_id_str },
+        type: { S: 'twitter-page-id' },
+        lookup: { S: 'twitter-page-id' },
+      },
+    })
+    .promise()
+
+  const sends = withPhotos.map((wp) => {
+    const enqueueParams: SendMessageRequest = {
+      QueueUrl: queueUrl,
+      MessageBody: JSON.stringify(wp),
+    }
+    return sqs.sendMessage(enqueueParams).promise()
+  })
+
+  await Promise.all(sends)
 }

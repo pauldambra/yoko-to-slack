@@ -1,4 +1,4 @@
-service: poll-for-toots
+service: yoko-to-slack
 
 frameworkVersion: '2'
 
@@ -54,6 +54,7 @@ provider:
       Action:
         - dynamodb:PutItem
         - dynamodb:GetItem
+        - dynamodb:Query
       # Restrict our IAM role permissions to
       # the specific table for the stage
       Resource:
@@ -88,8 +89,6 @@ constructs:
     type: queue
     worker:
       handler: sling-to-slack/handler.run
-      environment:
-        SLACK_WEBHOOK_URL: ${env:SLACK_WEBHOOK_URL}
   mediatoots:
     type: queue
     worker:
