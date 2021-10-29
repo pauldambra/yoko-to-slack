@@ -52,7 +52,10 @@ export const run = async () => {
     const getResult = await dynamoDB
       .getItem({
         TableName: tableName,
-        Key: { type: { S: 'twitter-page-id' } },
+        Key: {
+          type: { S: 'twitter-page-id' },
+          lookup: { S: 'twitter-page-id' },
+        },
       })
       .promise()
 
@@ -86,6 +89,7 @@ export const run = async () => {
         Item: {
           id: { S: search_metadata.max_id_str },
           type: { S: 'twitter-page-id' },
+          lookup: { S: 'twitter-page-id' },
         },
       })
       .promise()

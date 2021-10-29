@@ -16,10 +16,40 @@ provider:
   tracing:
     lambda: true
   architecture: arm64
+  logs:
+    httpApi: true
+  httpApi:
+    cors: true
   environment:
     TWITTER_BEARER_TOKEN: ${env:BEARER}
     DYNAMO_TABLE_NAME: ${self:custom.tableName}
+    DYNAMO_SESSION_STORE: ${self:custom.sessionStoreTableName}
+    SLACK_CLIENT_ID: ${env:SLACK_CLIENT_ID}
+    SLACK_SECRET: ${env:SLACK_SECRET}
+    API_URL: { "Fn::Join": [
+        "",
+      [
+          "https://",
+        {
+          "Ref": "HttpApi"
+        },
+          ".execute-api.",
+        {
+          "Ref": "AWS::Region"
+        },
+          ".",
+        {
+          "Ref": "AWS::URLSuffix"
+        }
+      ]
+    ]
+  }
   iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - cloudwatch:PutMetricData
+      Resource:
+        - '*'
     - Effect: Allow
       Action:
         - dynamodb:PutItem
@@ -28,6 +58,15 @@ provider:
       # the specific table for the stage
       Resource:
         - 'Fn::GetAtt': [YokoToSlackTable, Arn]
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dyanmodb:DeleteItem
+      # Restrict our IAM role permissions to
+      # the specific table for the stage
+      Resource:
+        - 'Fn::GetAtt': [SessionStoreTable, Arn]
     - Effect: Allow
       Action:
         - rekognition:DetectLabels
@@ -39,8 +78,12 @@ custom:
   stage: ${opt:stage, self:provider.stage}
   # Set the table name here so, we can use it while testing locally
   tableName: ${self:custom.stage}-yoko-to-slack
+  sessionStoreTableName: ${self:custom.stage}-yoko-to-slack-session-store
 
 constructs:
+  landing:
+    type: static-website
+    path: dist
   dogtoots:
     type: queue
     worker:
@@ -61,6 +104,23 @@ constructs:
             - '*'
 
 functions:
+  oAuth:
+    handler: oauth/handler.run
+    environment:
+      LANDING_PAGE: ${construct:landing.cname}
+    events:
+      - httpApi:
+          path: '/connect'
+          method: '*'
+      - httpApi:
+          path: '/connect/slack'
+          method: '*'
+      - httpApi:
+          path: '/connect/slack/callback'
+          method: '*'
+      - httpApi:
+          path: '/connect/slack/on-complete'
+          method: '*'
   pollToots:
     handler: poll-for-toots/handler.run
     environment:
@@ -79,7 +139,22 @@ resources:
         AttributeDefinitions:
           - AttributeName: type
             AttributeType: S
+          - AttributeName: lookup
+            AttributeType: S
         KeySchema:
           - AttributeName: type
+            KeyType: HASH
+          - AttributeName: lookup
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+    SessionStoreTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.sessionStoreTableName}
+        AttributeDefinitions:
+          - AttributeName: sid
+            AttributeType: S
+        KeySchema:
+          - AttributeName: sid
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST

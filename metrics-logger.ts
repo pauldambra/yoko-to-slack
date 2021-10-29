@@ -25,7 +25,7 @@ export const cloudwatchCounter = async (
         {
           MetricName: metricName,
           Timestamp: new Date(),
-          Unit: 'count',
+          Unit: 'Count',
           Value: count,
           Dimensions: [dimension],
         } as MetricDatum,
