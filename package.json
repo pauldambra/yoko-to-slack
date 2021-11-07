@@ -28,6 +28,7 @@
     "jest": "^27.2.5",
     "prettier": "2.4.1",
     "serverless": "^2.62.0",
+    "serverless-domain-manager": "^5.1.5",
     "serverless-lift": "^1.9.1",
     "serverless-plugin-typescript": "^2.1.0",
     "ts-jest": "^27.0.7",

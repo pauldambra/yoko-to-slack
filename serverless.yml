@@ -5,6 +5,7 @@ frameworkVersion: '2'
 plugins:
   - serverless-plugin-typescript
   - serverless-lift
+  - serverless-domain-manager
 
 provider:
   stage: dev
@@ -26,24 +27,7 @@ provider:
     DYNAMO_SESSION_STORE: ${self:custom.sessionStoreTableName}
     SLACK_CLIENT_ID: ${env:SLACK_CLIENT_ID}
     SLACK_SECRET: ${env:SLACK_SECRET}
-    API_URL: { "Fn::Join": [
-        "",
-      [
-          "https://",
-        {
-          "Ref": "HttpApi"
-        },
-          ".execute-api.",
-        {
-          "Ref": "AWS::Region"
-        },
-          ".",
-        {
-          "Ref": "AWS::URLSuffix"
-        }
-      ]
-    ]
-  }
+    API_URL: 'https://api.yoko-to-slack.dambra.dev'
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -80,6 +64,13 @@ custom:
   # Set the table name here so, we can use it while testing locally
   tableName: ${self:custom.stage}-yoko-to-slack
   sessionStoreTableName: ${self:custom.stage}-yoko-to-slack-session-store
+  customDomain:
+    http:
+      domainName: api.yoko-to-slack.dambra.dev
+      basePath: ''
+      endpointType: 'regional'
+      createRoute53Record: true
+      certificateName: 'yoko-to-slack.dambra.dev'
 
 constructs:
   landing:
